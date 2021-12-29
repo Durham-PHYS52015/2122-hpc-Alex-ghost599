@@ -1,0 +1,96 @@
+name: Basic functionality tests
+
+on: [push]
+
+jobs:
+  mpi:
+    name: Test MPI code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Install test harness
+        run: |
+          pip install tap.py
+      - name: Setup MPI
+        uses: mpi4py/setup-mpi@v1.0.1
+        with:
+          mpi: 'mpich'
+      - name: Build MPI code
+        working-directory: mpi
+        run: |
+          make
+      - name: Test MPI code with 1 process
+        working-directory: mpi
+        run: |
+          timeout 60 mpiexec -n 1 ./main | tappy
+      - name: Test MPI code with 4 processes
+        working-directory: mpi
+        run: |
+          timeout 60 mpiexec -n 4 ./main | tappy
+      - name: Check build is free of warnings
+        if: always()
+        working-directory: mpi
+        run: |
+          make clean
+          make CCFLAGS=-Werror
+      - name: Check code has no memory leaks
+        if: always()
+        working-directory: mpi
+        run: |
+          make clean
+          make CCFLAGS=-fsanitize=address
+          timeout 60 mpiexec -n 2 ./main -N 1 -t BENCH
+  openmp:
+    name: Test OpenMP code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Build OpenMP code
+        working-directory: openmp
+        run: |
+          make
+      - name: Check OpenMP code runs
+        working-directory: openmp
+        env:
+          OMP_NUM_THREADS: 2
+        run: |
+          timeout 60 ./main images/mario.pgm edges.pgm recon.pgm 100
+          file images/mario.pgm
+          file edges.pgm
+          file recon.pgm
+      - name: Test OpenMP shows reasonable convergence with 1 thread
+        env:
+          OMP_NUM_THREADS: 1
+        working-directory: openmp
+        run: |
+          timeout 60 ./main images/mario.pgm edges.pgm recon.pgm 1000 | tee convergence-1thread.dat
+          python check-convergence.py convergence-1thread.dat
+      - name: Test OpenMP shows reasonable convergence with 4 threads
+        env:
+          OMP_NUM_THREADS: 4
+        working-directory: openmp
+        run: |
+          timeout 60 ./main images/mario.pgm edges.pgm recon.pgm 1000 | tee convergence-4thread.dat
+          python check-convergence.py convergence-4thread.dat
+      - name: Check build is free of warnings
+        if: always()
+        working-directory: openmp
+        run: |
+          make clean
+          make CCFLAGS=-Werror
+      - name: Check code has no memory leaks
+        if: always()
+        env:
+          OMP_NUM_THREADS: 4
+        working-directory: openmp
+        run: |
+          make clean
+          make CCFLAGS=-fsanitize=address
+          timeout 60 ./main images/mario.pgm edges.pgm recon.pgm 1000
+          

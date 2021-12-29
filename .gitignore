@@ -1,0 +1,9 @@
+.cache/
+*.o
+mpi/main
+openmp/main
+*.dSYM/
+compile_commands.json
+/mpi/reduce-solution.c
+/openmp/main-solution.c
+
