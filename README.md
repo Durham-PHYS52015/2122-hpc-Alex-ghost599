@@ -1,6 +1,6 @@
 # Coursework template code
 
-CIS Username: [ADD YOUR USERNAME HERE]
+CIS Username: [lsxm74]
 
 This repository contains the starting code for the summative
 coursework exercise for PHYS52015 (Introduction to HPC) for 2021/22.
