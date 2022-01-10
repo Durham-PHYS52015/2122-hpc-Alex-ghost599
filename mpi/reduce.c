@@ -104,6 +104,5 @@ int tree_allreduce(const int *sendbuf, int *recvbuf, int count, MPI_Op op,
       } 
     }
     
-    
   return 0;
 }
