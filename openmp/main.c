@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <omp.h>
 #include "image.h"
 #include "pgmio.h"
 
@@ -84,9 +85,11 @@ void ResidualNorm(Image edges, Image solution, float *residual)
 void ReconstructFromEdges(Image edges, int niterations, Image *output)
 {
   Image new = NULL;
+  // double start_t, end_t;
   int NX = edges->NX;
   int NY = edges->NY;
   float r0, r;
+  // start_t = omp_get_wtime();
   /* Copy edges into old image */
   CopyImage(edges, &new);
   /* Construct the initial residual */
@@ -101,28 +104,80 @@ void ReconstructFromEdges(Image edges, int niterations, Image *output)
     }
     /* You should try and parallelise these loops.
      * Take care to avoid data races.*/
-    for (int i = 0; i < NY; i++) { /* rows */
-      for (int j = 0; j < NX; j++) { /* columns */
-        const int ij = linear_index(i, j, NX);
-        const int ijm1 = linear_index(i, j-1, NX);
-        const int ijp1 = linear_index(i, j+1, NX);
-        const int im1j = linear_index(i-1, j, NX);
-        const int ip1j = linear_index(i+1, j, NX);
-        float vij, vijm1, vijp1, vim1j, vip1j;
 
-        vij = edges->data[ij];
-        vim1j = (i == 0) ? 0 : new->data[im1j];
-        vip1j = (i == NY-1) ? 0 : new->data[ip1j];
-        vijm1 = (j == 0) ? 0 : new->data[ijm1];
-        vijp1 = (j == NX-1) ? 0 : new->data[ijp1];
-        new->data[ij] = 0.25*(vijm1 + vijp1 + vim1j + vip1j) - 0.25*vij;
-      }
+    // for (int i = 0; i < NY; i++) { /* rows */
+    //   for (int j = 0; j < NX; j++) { /* columns */
+    //     const int ij = linear_index(i, j, NX);
+    //     const int ijm1 = linear_index(i, j-1, NX);
+    //     const int ijp1 = linear_index(i, j+1, NX);
+    //     const int im1j = linear_index(i-1, j, NX);
+    //     const int ip1j = linear_index(i+1, j, NX);
+    //     float vij, vijm1, vijp1, vim1j, vip1j;
+
+    //     vij = edges->data[ij];
+    //     vim1j = (i == 0) ? 0 : new->data[im1j];
+    //     vip1j = (i == NY-1) ? 0 : new->data[ip1j];
+    //     vijm1 = (j == 0) ? 0 : new->data[ijm1];
+    //     vijp1 = (j == NX-1) ? 0 : new->data[ijp1];
+    //     new->data[ij] = 0.25*(vijm1 + vijp1 + vim1j + vip1j) - 0.25*vij;
+    //   }
+    // }
+    #pragma omp parallel
+	  {
+      #pragma omp for
+       
+        for (int i = 0; i < NY; i++) { /* rows */
+          for (int j = 0; j < NX; j++) { /* columns */
+            if ((i+j)%2 == 0)
+            {
+              const int ij = linear_index(i, j, NX);
+              const int ijm1 = linear_index(i, j-1, NX);
+              const int ijp1 = linear_index(i, j+1, NX);
+              const int im1j = linear_index(i-1, j, NX);
+              const int ip1j = linear_index(i+1, j, NX);
+              float vij, vijm1, vijp1, vim1j, vip1j;
+
+              vij = edges->data[ij];
+              vim1j = (i == 0) ? 0 : new->data[im1j];
+              vip1j = (i == NY-1) ? 0 : new->data[ip1j];
+              vijm1 = (j == 0) ? 0 : new->data[ijm1];
+              vijp1 = (j == NX-1) ? 0 : new->data[ijp1];
+              new->data[ij] = 0.25*(vijm1 + vijp1 + vim1j + vip1j) - 0.25*vij;
+            }
+          }
+        }
+      
+      #pragma omp for
+       
+        for (int i = 0; i < NY; i++) { /* rows */
+          for (int j = 0; j < NX; j++) { /* columns */
+            if ((i+j)%2 != 0)
+            {
+              const int ij = linear_index(i, j, NX);
+              const int ijm1 = linear_index(i, j-1, NX);
+              const int ijp1 = linear_index(i, j+1, NX);
+              const int im1j = linear_index(i-1, j, NX);
+              const int ip1j = linear_index(i+1, j, NX);
+              float vij, vijm1, vijp1, vim1j, vip1j;
+
+              vij = edges->data[ij];
+              vim1j = (i == 0) ? 0 : new->data[im1j];
+              vip1j = (i == NY-1) ? 0 : new->data[ip1j];
+              vijm1 = (j == 0) ? 0 : new->data[ijm1];
+              vijp1 = (j == NX-1) ? 0 : new->data[ijp1];
+              new->data[ij] = 0.25*(vijm1 + vijp1 + vim1j + vip1j) - 0.25*vij;
+            }
+          }
+        }
+      
     }
   }
   /* Final residual */
   ResidualNorm(edges, new, &r);
   printf("%6d ||r||/||r0|| = %g\n", niterations, r/r0);
   *output = new;
+  // end_t = omp_get_wtime();
+  // printf("time took %f seconds\n", end_t - start_t);
 }
 
 int main(int argc, char **argv)

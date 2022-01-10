@@ -1,0 +1,9 @@
+srun: Job step aborted: Waiting up to 602 seconds for job step to finish.
+slurmstepd: error: *** STEP 4561021.24 ON cn7065 CANCELLED AT 2022-01-09T19:31:54 DUE TO TIME LIMIT ***
+slurmstepd: error: *** JOB 4561021 ON cn7065 CANCELLED AT 2022-01-09T19:31:54 DUE TO TIME LIMIT ***
+srun: got SIGCONT
+srun: error: cn7065: task 0: Terminated
+srun: forcing job termination
+srun: error: cn7078: task 1: Terminated
+[mpiexec@cn7065.hpc.dur.ac.uk] wait_proxies_to_terminate (../../../../../src/pm/i_hydra/mpiexec/intel/i_mpiexec.c:528): downstream from host cn7065 exited with status 143
+[mpiexec@cn7065.hpc.dur.ac.uk] main (../../../../../src/pm/i_hydra/mpiexec/mpiexec.c:2084): assert (exitcodes != NULL) failed
